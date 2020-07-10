@@ -12,10 +12,16 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBOutlet weak var window: NSWindow!
-
-
+    @IBOutlet weak var newItemWindow: NSWindow!
+    @IBOutlet weak var newToDoInput: NSTextField!
+    
+    
+    @IBOutlet var textView: NSTextView!
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Insert code here to initialize your application
+        
+        self.renderData()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
@@ -23,7 +29,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Core Data stack
-
+    var context:NSManagedObjectContext?
     lazy var persistentContainer: NSPersistentContainer = {
         /*
          The persistent container for the application. This implementation
@@ -47,9 +53,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                  */
                 fatalError("Unresolved error \(error)")
             }
+            
+            self.context = container.viewContext
         })
         return container
     }()
+    
 
     // MARK: - Core Data Saving and Undo support
 
@@ -119,5 +128,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateNow
     }
 
+    
+    @IBAction func newButtonClicked(_ sender: Any) {
+        self.newItemWindow.setIsVisible(true)
+        self.newItemWindow.display()
+        self.newToDoInput.stringValue = ""
+    }
+    
+    
+    @IBAction func handleAddToDoButton(_ sender: Any) {
+        let value:String = self.newToDoInput.stringValue
+        
+        let todo = NSEntityDescription.insertNewObject(forEntityName:"Todo",  into: self.persistentContainer.viewContext) as! Todo
+        
+        todo.text = value
+        todo.creation = Date.init()
+        todo.completion = nil
+        
+        do {
+            try self.persistentContainer.viewContext.save()
+        }
+        catch {
+            fatalError("Failure to save context: \(error)")
+        }
+        
+        self.newItemWindow.close()
+        
+        self.renderData()
+    }
+    
+    
+    func renderData() {
+        self.textView.string = ""
+        do {
+            let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Todo")
+            let result = try self.persistentContainer.viewContext.fetch(fetchRequest)
+            for data in result as! [NSManagedObject] {
+                self.textView.string.append("\(data.description)\n")
+            }
+        } catch  {
+            print("ERROR")
+        }
+    }
 }
 
